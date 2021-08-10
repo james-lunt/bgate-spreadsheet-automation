@@ -1,3 +1,4 @@
+from server import run_server
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 from pprint import pprint
@@ -14,13 +15,15 @@ client = gspread.authorize(credentials)
 # Open the spreadhseet
 sheet = client.open("Zalando Data").worksheet("zalando_data")
 
+run_server()
+
 # Get a list of all records
 data = sheet.get_all_records()
 #pprint(data)
 values_list = sheet.col_values(1)
 
-pprint(len(values_list))
-
+#pprint(len(values_list))
+number = len(values_list)
 
 # Insert the list as a row at index 8
 #insertRow = ["GA111A28J-A11","Gabor","Trainers — weiß/ice","https://img01.ztat.net/article/spp-media-p1/bc1c433d1649346e9eb02d316961bfc9/dd8d3ad466d64631b956405046eb9ca1.jpg","£89.99","https://www.zalando.co.uk/gabor-trainers-weissice-ga111a28j-a11.html"]
