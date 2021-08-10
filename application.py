@@ -1,4 +1,4 @@
-# Start with a basic flask app webpage.
+#imports
 from flask_socketio import SocketIO, emit
 from flask import Flask, render_template, url_for, copy_current_request_context
 from random import random
@@ -9,7 +9,6 @@ from oauth2client.service_account import ServiceAccountCredentials
 from pprint import pprint
 
 
-#__author__ = 'slynn'
 # scope of the application
 scope = ["https://spreadsheets.google.com/feeds", 'https://www.googleapis.com/auth/spreadsheets',
          "https://www.googleapis.com/auth/drive.file", "https://www.googleapis.com/auth/drive"]
@@ -29,19 +28,21 @@ app.config['DEBUG'] = True
 #turn the flask app into a socketio app
 socketio = SocketIO(app, async_mode=None, logger=True, engineio_logger=True)
 
-#random number Generator Thread
 thread = Thread()
 thread_stop_event = Event()
 
-def randomNumberGenerator():
+def log_update():
     """
-    Generate a random number every 1 second and emit to a socketio instance (broadcast)
-    Ideally to be run in a separate thread?
+    Print number of rows every few seconds
+
     """
     #infinite loop of magical random numbers
     print("Making random numbers")
     while not thread_stop_event.isSet():
         values_list = sheet.col_values(1)
+        # Insert the list as a row at index 8
+        insertRow = ["GA111A28J-A11","Gabor","Trainers — weiß/ice","https://img01.ztat.net/article/spp-media-p1/bc1c433d1649346e9eb02d316961bfc9/dd8d3ad466d64631b956405046eb9ca1.jpg","£89.99","https://www.zalando.co.uk/gabor-trainers-weissice-ga111a28j-a11.html"]
+        sheet.insert_row(insertRow, 8)
         number = len(values_list)
         print(number)
         socketio.emit('newnumber', {'number': number}, namespace='/test')
@@ -59,10 +60,10 @@ def test_connect():
     global thread
     print('Client connected')
 
-    #Start the random number generator thread only if the thread has not been started before.
+    #Start the log thread only if the thread has not been started before.
     if not thread.is_alive():
         print("Starting Thread")
-        thread = socketio.start_background_task(randomNumberGenerator)
+        thread = socketio.start_background_task(log_update)
 
 @socketio.on('disconnect', namespace='/test')
 def test_disconnect():
