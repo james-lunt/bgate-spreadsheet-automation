@@ -1,33 +1,12 @@
-#Splits the invoice pdf to seperate spreadsheets for each client
-#imports
-from flask_socketio import SocketIO, emit
-from flask import Flask, render_template, url_for, copy_current_request_context
-from random import random
-from time import sleep
-from threading import Thread, Event
+# Splits the invoice pdf to seperate spreadsheets for each client
+from io import StringIO
+import requests
+import urllib
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 from pprint import pprint
 
-from io import StringIO
 
-from pdfminer.converter import TextConverter
-from pdfminer.layout import LAParams
-from pdfminer.pdfdocument import PDFDocument
-from pdfminer.pdfinterp import PDFResourceManager, PDFPageInterpreter
-from pdfminer.pdfpage import PDFPage
-from pdfminer.pdfparser import PDFParser
-
-import requests
-import urllib
-
-
-url = 'https://drive.google.com/uc?id=15Zqk5A1BEOdeC2aDwVuVzTcqjYJb_Igr&export=download'
-r = requests.get(url, allow_redirects=True)
-
-open('INVOICE', 'wb').write(r.content)
-
-"""
 # scope of the application
 scope = ["https://spreadsheets.google.com/feeds", 'https://www.googleapis.com/auth/spreadsheets',
          "https://www.googleapis.com/auth/drive.file", "https://www.googleapis.com/auth/drive"]
@@ -37,20 +16,36 @@ credentials = ServiceAccountCredentials.from_json_keyfile_name(
 
 client = gspread.authorize(credentials)
 
-# Open the spreadhseet
-sheet = client.open("Copy of sample PDF data rows").worksheet("incoming")
-"""
 
-#Extracts text from pdf and puts it into python variable
-output_string = StringIO()
-with open('INVOICE', 'rb') as in_file:
-    parser = PDFParser(in_file)
-    doc = PDFDocument(parser)
-    rsrcmgr = PDFResourceManager()
-    device = TextConverter(rsrcmgr, output_string, laparams=LAParams())
-    interpreter = PDFPageInterpreter(rsrcmgr, device)
-    for page in PDFPage.create_pages(doc):
-        interpreter.process_page(page)
+# Client spreadsheets spreadhseet
+invoices = client.open("Copy of sample PDF data rows").worksheet("incoming")
+pemberton_sheet = client.open("PEMBERTON")
+calco_sheet = client.open("CALCO")
+yankeecandles_sheet = client.open("YANKEECANDLES")
+naturallife_sheet = client.open("NATURALIFE")
+naturalmed_sheet = client.open("NATURALMED")
 
+# row we're working with
+index = 1
 
-print(output_string.getvalue())
+# creates a new sheet on the suppliers spreadsheet for a new invoice
+def new_invoice(supplier, supplier_sheet):
+    file_name = invoices.col_values(2)
+    supplier_sheet.add_worksheet(title=file_name[index], rows="100", cols="20")
+
+#identifies the supplier and calls new_invoice with the according parameters
+def identify_supplier():
+    supplier = invoices.col_values(6)
+    pprint(supplier[index])
+    if supplier[index] == 'PEMBERTON':
+        new_invoice(supplier, pemberton_sheet)
+    if supplier[index] == 'CALCO':
+        new_invoice(supplier, calco_sheet)
+    if supplier[index] == 'YANKEECANDLES':
+        new_invoice(supplier, yankeecandles_sheet)
+    if supplier[index] == 'NATURALIFE':
+        new_invoice(supplier, naturallife_sheet)
+    if supplier[index] == 'NATURALMED':
+        new_invoice(supplier, naturalmed_sheet)
+
+identify_supplier()
