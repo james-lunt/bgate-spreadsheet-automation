@@ -13,6 +13,15 @@ client = setup_api()
 #open sheets
 invoices,pemberton_sheet,calco_sheet,yankeecandles_sheet,naturallife_sheet,naturalmed_sheet = open_sheets(client)
 
+current_rows = len(invoices.col_values(1))
+pprint("Start")
+while(True):
+    if len(invoices.col_values(1)) > current_rows:
+        print("yes")
+        break 
+
+pprint("done")
+
 # creates a new sheet on the suppliers spreadsheet for a new invoice
 def new_invoice(supplier, supplier_sheet):
     file_name = invoices.col_values(2)
@@ -32,5 +41,3 @@ def identify_supplier():
         new_invoice(supplier, naturallife_sheet)
     if supplier[index] == 'NATURALMED':
         new_invoice(supplier, naturalmed_sheet)
-
-identify_supplier()
