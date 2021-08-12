@@ -1,32 +1,17 @@
 # Splits the invoice pdf to seperate spreadsheets for each client
+from setupAPI import *
 from io import StringIO
 import requests
-import urllib
-import gspread
-from oauth2client.service_account import ServiceAccountCredentials
+import urllib 
 from pprint import pprint
-
-
-# scope of the application
-scope = ["https://spreadsheets.google.com/feeds", 'https://www.googleapis.com/auth/spreadsheets',
-         "https://www.googleapis.com/auth/drive.file", "https://www.googleapis.com/auth/drive"]
-
-credentials = ServiceAccountCredentials.from_json_keyfile_name(
-    "creds.json", scope)
-
-client = gspread.authorize(credentials)
-
-
-# Client spreadsheets spreadhseet
-invoices = client.open("Copy of sample PDF data rows").worksheet("incoming")
-pemberton_sheet = client.open("PEMBERTON")
-calco_sheet = client.open("CALCO")
-yankeecandles_sheet = client.open("YANKEECANDLES")
-naturallife_sheet = client.open("NATURALIFE")
-naturalmed_sheet = client.open("NATURALMED")
 
 # row we're working with
 index = 1
+
+#API initialisation
+client = setup_api()
+#open sheets
+invoices,pemberton_sheet,calco_sheet,yankeecandles_sheet,naturallife_sheet,naturalmed_sheet = open_sheets(client)
 
 # creates a new sheet on the suppliers spreadsheet for a new invoice
 def new_invoice(supplier, supplier_sheet):
