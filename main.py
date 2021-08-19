@@ -2,8 +2,6 @@
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 import fitz
-import gspread
-from oauth2client.service_account import ServiceAccountCredentials
 from pprint import pprint
 import os, sys
 import numpy as np
@@ -19,67 +17,74 @@ credentials = ServiceAccountCredentials.from_json_keyfile_name(
 
 client = gspread.authorize(credentials)
 
-
+#open admin sheet
+admin = client.open("sample PDF data rows").worksheet("admin")
+admin_values = admin.get_all_values()
 
 
 #---------------------------------Check for new invoices------------------------------------
+#open invoice sheet
 invoices = client.open("sample PDF data rows").worksheet("incoming")
 invoice_values = invoices.get_all_values()
-process_list = []
 
-row_counter = 1 #used for indexing later
+#count spreadsheet rows for indexing    
+row_counter = 1 
 for invoice in invoice_values:
-    #Boolean value in column 6
     if invoice[6] == 'TRUE':
-        process_list.append(invoice)
+        #get url and name for pdf
+        pdf_name = invoice[1]
+        pdf_url = invoice[3]
+        #get the supppliers name
+        invoice_supplier = invoice[5]
 
+
+        #------------------------------------Download and Convert PDF------------------------------
+        r = requests.get(pdf_url, allow_redirects=True)
+        #write pdf to local machine with correct name
+        open(pdf_name, 'wb').write(r.content)
+
+
+        #convert pdf to text
+        os.system('python -m fitz gettext {}'.format(pdf_name))
+        #to find converted text file on local machine
+        text_name = pdf_name.replace('.PDF', '.txt')
+
+
+        #---------------------Tilda parse data and write it to google sheets-----------------------
+        #create empty 2D array
+        empty_array = np.empty((0, 1),str)
+
+        #open converted text file
+        with open(text_name) as f:
+            #iterate through each line
+            for line in f:
+                #if line has values in it other than just a new character
+                if line != ('\n'):
+                    #append line to 2D array while replacing spaces with tildas, stripping new line characters and indicating the end of a page with EOP
+                    empty_array = np.append(empty_array, np.array([[line.replace(' ','~').replace('\n','').replace('\x0c','EOP')]]), axis=0)
+
+
+        #search admin sheet for destination sheet
+        for i in admin_values:
+            #if supplier label matches
+            if i[0] == invoice_supplier:
+                #open respective worksheet
+                dest = client.open_by_key(i[1]).worksheet("Sheet1")
+                #clear sheet of previous input
+                dest.clear()
+                #write parsed data to sheet
+                dest.update('A1',empty_array.tolist())
+                break
+
+
+        #set check to false on invoices sheet
+        invoices.update_cell(row_counter,7,'FALSE')
+
+        #-----------------------------Delete text and pdf off local machine----------------------- 
+        os.remove(text_name)
+        os.remove(pdf_name)
+
+    #count spreadsheet rows for indexing    
     row_counter+=1
 
-
-#------------------------------------Download and Convert PDF------------------------------
-for invoice in process_list:
-    #get url and name for pdf
-    pdf_name = invoice[1]
-    pdf_url = invoice[3]
-    #download pdf   
-    r = requests.get(pdf_url, allow_redirects=True)
-    #write pdf to local machine with correct name
-    open(pdf_name, 'wb').write(r.content)
-
-
-    #convert pdf to text
-    os.system('python -m fitz gettext {}'.format(pdf_name))
-
-    text_name = pdf_name.replace('.PDF', '.txt')
-
-
-
-
-#---------------------Tilda parse data and write it to google sheets-----------------------
-    #create empty 2D array
-    empty_array = np.empty((0, 1),str)
-
-    #open converted text file
-    with open(text_name) as f:
-        #iterate through each line
-        for line in f:
-            #if line has values in it other than just a new character
-            if line != ('\n'):
-                #append line to 2D array while replacing spaces with tildas, stripping new line characters and indicating the end of a page with EOP
-                empty_array = np.append(empty_array, np.array([[line.replace(' ','~').replace('\n','').replace('\x0c','EOP')]]), axis=0)
-
-    #Open Outbound invoices sheet
-    outbound = client.open("Output").worksheet("Sheet1")
-    outbound.clear() #clear sheet for testing
-
-    # Write the array to worksheet starting from the 1st cell
-    outbound.update('A1', empty_array.tolist())
-    #close text file
-    f.close()
-    #set check to false on invoices sheet
-    invoices.update_cell(row_counter,7,'FALSE')
-
-
-#-----------------------------Delete text and pdf off local machine-----------------------
-    os.remove(text_name)
-    os.remove(pdf_name)
+    #loop
