@@ -26,12 +26,14 @@ client = gspread.authorize(credentials)
 invoices = client.open("sample PDF data rows").worksheet("incoming")
 invoice_values = invoices.get_all_values()
 process_list = []
+
+row_counter = 1 #used for indexing later
 for invoice in invoice_values:
     #Boolean value in column 6
     if invoice[6] == 'TRUE':
         process_list.append(invoice)
 
-#print(process_list)
+    row_counter+=1
 
 
 #------------------------------------Download and Convert PDF------------------------------
@@ -49,6 +51,8 @@ for invoice in process_list:
     os.system('python -m fitz gettext {}'.format(pdf_name))
 
     text_name = pdf_name.replace('.PDF', '.txt')
+
+
 
 
 #---------------------Tilda parse data and write it to google sheets-----------------------
@@ -72,6 +76,9 @@ for invoice in process_list:
     outbound.update('A1', empty_array.tolist())
     #close text file
     f.close()
+    #set check to false on invoices sheet
+    invoices.update_cell(row_counter,7,'FALSE')
+
 
 #-----------------------------Delete text and pdf off local machine-----------------------
     os.remove(text_name)
