@@ -6,6 +6,8 @@ from pprint import pprint
 import os, sys
 import numpy as np
 import requests
+import time
+import datetime
 
 
 #----------------------------------Setup API-------------------------------------------------
@@ -29,11 +31,22 @@ invoice_values = invoices.get_all_values()
 
 #count spreadsheet rows for indexing    
 row_counter = 1 
+#counts the number invoices being processed
+#sleep_count = 0
 for invoice in invoice_values:
+    time.sleep(10)
     if invoice[6] == 'TRUE':
+        """
+        print(sleep_count)
+        #every 10 procedures sleep
+        if sleep_count == 5:
+        sleep_count+=1
+        """
+
         #get url and name for pdf
         pdf_name = invoice[1]
         pdf_url = invoice[3]
+        pdf_short_url = invoice[2]
         #get the supppliers name
         invoice_supplier = invoice[5]
 
@@ -51,9 +64,8 @@ for invoice in invoice_values:
 
 
         #---------------------Tilda parse data and write it to google sheets-----------------------
-        #create empty 2D array
-        empty_array = np.empty((0, 1),str)
-
+        #create 2D array with pdf name and short url as the first entries
+        empty_array = np.array([[pdf_name],[pdf_short_url]])
         #open converted text file
         with open(text_name) as f:
             #iterate through each line
